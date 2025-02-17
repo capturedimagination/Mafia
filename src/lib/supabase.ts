@@ -5,17 +5,20 @@ const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
 console.log("Supabase Config:", {
-  url: supabaseUrl,
-  key: supabaseAnonKey ? "[HIDDEN]" : "Not Set",
+  url: supabaseUrl ? "[SET]" : "Not Set",
+  key: supabaseAnonKey ? "[SET]" : "Not Set",
 });
 
 if (!supabaseUrl || !supabaseAnonKey) {
   console.warn(
-    "⚠️ Supabase credentials missing. Make sure to connect your Supabase project in the left panel.",
+    "⚠️ Supabase credentials missing. Make sure to set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY environment variables.",
   );
 }
 
-export const supabase = createClient<Database>(supabaseUrl!, supabaseAnonKey!);
+export const supabase = createClient<Database>(
+  supabaseUrl || "https://placeholder.supabase.co",
+  supabaseAnonKey || "placeholder",
+);
 
 // Test the connection
 supabase
