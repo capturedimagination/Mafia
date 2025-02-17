@@ -21,6 +21,7 @@ interface CreateGameModalProps {
     totalPlayers: number;
     mafiaCount: number;
     gameCode?: string;
+    gameDuration: number;
   }) => void;
 }
 
@@ -31,6 +32,7 @@ const CreateGameModal = ({
 }: CreateGameModalProps) => {
   const [totalPlayers, setTotalPlayers] = React.useState(6);
   const [mafiaCount, setMafiaCount] = React.useState(2);
+  const [gameDuration, setGameDuration] = React.useState(15);
 
   // Update mafia count if it exceeds total players / 3
   React.useEffect(() => {
@@ -109,6 +111,28 @@ const CreateGameModal = ({
                 {totalPlayers - mafiaCount === 1 ? "Civilian" : "Civilians"}
               </p>
             </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="game-duration">Game Duration (minutes)</Label>
+              <div className="flex items-center gap-4">
+                <Slider
+                  id="game-duration"
+                  min={1}
+                  max={60}
+                  step={1}
+                  value={[gameDuration]}
+                  onValueChange={(value) => setGameDuration(value[0])}
+                  className="w-full"
+                />
+                <div className="bg-gray-800 px-3 py-1 rounded-md min-w-[64px] text-center">
+                  {gameDuration}m
+                </div>
+              </div>
+              <p className="text-sm text-gray-400 mt-1">
+                Game will last {gameDuration} minute
+                {gameDuration !== 1 ? "s" : ""}
+              </p>
+            </div>
           </div>
         </div>
 
@@ -118,8 +142,9 @@ const CreateGameModal = ({
             onClick={() => {
               // Create test game with 6 players and 2 mafia
               onCreateGame({
-                totalPlayers: 6,
-                mafiaCount: 2,
+                totalPlayers,
+                mafiaCount,
+                gameDuration,
                 gameCode:
                   "TEST" +
                   Math.random().toString(36).substring(2, 4).toUpperCase(),
@@ -138,7 +163,16 @@ const CreateGameModal = ({
               Cancel
             </Button>
             <Button
-              onClick={handleCreateGame}
+              onClick={() =>
+                onCreateGame({
+                  totalPlayers,
+                  mafiaCount,
+                  gameDuration,
+                  gameCode:
+                    "GAME" +
+                    Math.random().toString(36).substring(2, 4).toUpperCase(),
+                })
+              }
               className="bg-purple-600 hover:bg-purple-700"
             >
               Create Game

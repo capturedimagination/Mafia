@@ -21,6 +21,8 @@ interface GameLobbyProps {
   countdownSeconds?: number;
   isGameStarting?: boolean;
   onStartGame?: () => void;
+  onLeave?: () => void;
+  hostName?: string;
 }
 
 const GameLobby = ({
@@ -52,13 +54,24 @@ const GameLobby = ({
   countdownSeconds = 5,
   isGameStarting = false,
   onStartGame = () => {},
+  onLeave = () => {},
+  hostName = "Unknown",
 }: GameLobbyProps) => {
   const isEnoughPlayers = players.length >= minPlayers;
   const allPlayersReady = players.every((player) => player.isReady);
 
   return (
-    <div className="min-h-[600px] w-full max-w-[800px] mx-auto bg-gray-900 p-8 rounded-xl shadow-xl">
-      <div className="flex flex-col items-center space-y-6">
+    <div className="min-h-[600px] w-full max-w-[800px] mx-auto bg-gray-900 p-8 rounded-xl shadow-xl relative">
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={onLeave}
+        className="absolute top-4 left-4 bg-gray-800 hover:bg-gray-700 text-white border-gray-700"
+      >
+        ← Leave Game
+      </Button>
+      <div className="flex flex-col items-center space-y-6 mt-8">
+        <h2 className="text-2xl font-bold text-white">{hostName}'s Game</h2>
         {/* Players List */}
         <div className="w-full">
           <div className="flex items-center justify-between mb-4">
@@ -112,7 +125,7 @@ const GameLobby = ({
 
         {/* Start Game Button */}
         <Button
-          className="w-full max-w-md py-6 text-lg"
+          className="w-full max-w-md py-6 text-lg bg-gradient-to-r from-yellow-600 to-yellow-500 hover:from-yellow-500 hover:to-yellow-400 border-2 border-yellow-400/20 shadow-lg shadow-yellow-900/20 disabled:from-gray-700 disabled:to-gray-600 disabled:border-gray-600/20 disabled:shadow-none transition-all duration-200"
           disabled={!isEnoughPlayers || !allPlayersReady}
           onClick={onStartGame}
         >
