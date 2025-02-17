@@ -10,9 +10,9 @@ import {
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
 import { Label } from "@/components/ui/label";
-import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { Copy } from "lucide-react";
+import { supabase } from "@/lib/supabase";
 
 interface CreateGameModalProps {
   open?: boolean;
@@ -42,15 +42,27 @@ const CreateGameModal = ({
     }
   }, [totalPlayers]);
 
-  const handleCreateGame = () => {
-    onCreateGame({ totalPlayers, mafiaCount, gameCode });
-  };
+  const handleCreateGame = async (isTest = false) => {
+    const gameCode =
+      (isTest ? "TEST" : "GAME") +
+      Math.random().toString(36).substring(2, 4).toUpperCase();
 
-  const copyGameCode = async () => {
     try {
-      await navigator.clipboard.writeText(gameCode);
-    } catch (err) {
-      console.error("Failed to copy game code", err);
+      const { error } = await supabase.from("game_sessions").insert({
+        host_name: "Player",
+        total_players: totalPlayers,
+        mafia_count: mafiaCount,
+        game_duration: gameDuration,
+        game_code: gameCode,
+        status: "waiting",
+        current_players: 1,
+      });
+
+      if (error) throw error;
+
+      onCreateGame({ totalPlayers, mafiaCount, gameDuration, gameCode });
+    } catch (error) {
+      console.error("Error creating game:", error);
     }
   };
 
@@ -139,17 +151,7 @@ const CreateGameModal = ({
         <DialogFooter className="flex-col sm:flex-row gap-2">
           <Button
             variant="outline"
-            onClick={() => {
-              // Create test game with 6 players and 2 mafia
-              onCreateGame({
-                totalPlayers,
-                mafiaCount,
-                gameDuration,
-                gameCode:
-                  "TEST" +
-                  Math.random().toString(36).substring(2, 4).toUpperCase(),
-              });
-            }}
+            onClick={() => handleCreateGame(true)}
             className="w-full sm:w-auto bg-gray-800 text-white hover:bg-gray-700 border-gray-600"
           >
             Create Test Game
@@ -163,16 +165,7 @@ const CreateGameModal = ({
               Cancel
             </Button>
             <Button
-              onClick={() =>
-                onCreateGame({
-                  totalPlayers,
-                  mafiaCount,
-                  gameDuration,
-                  gameCode:
-                    "GAME" +
-                    Math.random().toString(36).substring(2, 4).toUpperCase(),
-                })
-              }
+              onClick={() => handleCreateGame(false)}
               className="bg-purple-600 hover:bg-purple-700"
             >
               Create Game

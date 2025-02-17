@@ -10,8 +10,10 @@ import { Button } from "@/components/ui/button";
 import { Users, Crown } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { useEffect, useState } from "react";
+import { supabase, type GameSession } from "@/lib/supabase";
 
-interface Game {
+interface Game extends Omit<GameSession, "created_at"> {
   id: string;
   hostName: string;
   playerCount: number;
@@ -30,30 +32,63 @@ const JoinGameModal = ({
   isOpen = true,
   onClose = () => {},
   onJoin = () => {},
-  availableGames = [
-    {
-      id: "1",
-      hostName: "Player 1",
-      playerCount: 3,
-      totalPlayers: 6,
-      status: "waiting",
-    },
-    {
-      id: "2",
-      hostName: "Player 2",
-      playerCount: 6,
-      totalPlayers: 6,
-      status: "full",
-    },
-    {
-      id: "3",
-      hostName: "Player 3",
-      playerCount: 4,
-      totalPlayers: 8,
-      status: "waiting",
-    },
-  ],
+  availableGames = [],
 }: JoinGameModalProps) => {
+  const [games, setGames] = useState<Game[]>([]);
+
+  useEffect(() => {
+    // Initial fetch of games
+    const fetchGames = async () => {
+      try {
+        const { data, error } = await supabase
+          .from("game_sessions")
+          .select("*")
+          .eq("status", "waiting");
+
+        if (error) {
+          console.error("Error fetching games:", error);
+          return;
+        }
+
+        if (!data) return;
+
+        setGames(
+          data.map((game) => ({
+            id: game.id,
+            hostName: game.host_name,
+            playerCount: game.current_players,
+            totalPlayers: game.total_players,
+            status: game.status as "waiting" | "full" | "in-progress",
+            mafiaCount: game.mafia_count,
+            gameDuration: game.game_duration,
+            gameCode: game.game_code,
+          })),
+        );
+      } catch (error) {
+        console.error("Error fetching games:", error);
+      }
+    };
+
+    fetchGames();
+
+    // Subscribe to real-time changes
+    const subscription = supabase
+      .channel("game_sessions")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "game_sessions" },
+        (payload) => {
+          console.log("Real-time update:", payload);
+          fetchGames(); // Refetch games when there's any change
+        },
+      )
+      .subscribe();
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, []);
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-[600px] bg-gray-900 text-white">
@@ -68,7 +103,7 @@ const JoinGameModal = ({
 
         <ScrollArea className="h-[400px] pr-4">
           <div className="space-y-4">
-            {availableGames.map((game) => (
+            {games.map((game) => (
               <Card
                 key={game.id}
                 className={`p-4 bg-gray-800 border-gray-700 ${game.status === "waiting" ? "hover:border-purple-500 cursor-pointer" : "opacity-50"}`}
