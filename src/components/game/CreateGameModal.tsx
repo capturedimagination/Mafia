@@ -10,9 +10,9 @@ import {
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
 import { Label } from "@/components/ui/label";
-import { Card } from "@/components/ui/card";
-import { Copy } from "lucide-react";
+import { AlertCircle } from "lucide-react";
 import { supabase } from "@/lib/supabase";
+import type { TablesInsert } from "@/types/supabase";
 
 interface CreateGameModalProps {
   open?: boolean;
@@ -33,6 +33,8 @@ const CreateGameModal = ({
   const [totalPlayers, setTotalPlayers] = React.useState(6);
   const [mafiaCount, setMafiaCount] = React.useState(2);
   const [gameDuration, setGameDuration] = React.useState(15);
+  const [error, setError] = React.useState<string | null>(null);
+  const [creating, setCreating] = React.useState(false);
 
   // Update mafia count if it exceeds total players / 3
   React.useEffect(() => {
@@ -43,12 +45,17 @@ const CreateGameModal = ({
   }, [totalPlayers]);
 
   const handleCreateGame = async (isTest = false) => {
+    setCreating(true);
+    setError(null);
+
     const gameCode =
       (isTest ? "TEST" : "GAME") +
       Math.random().toString(36).substring(2, 4).toUpperCase();
 
+    console.log("Creating game with code:", gameCode);
+
     try {
-      const { error } = await supabase.from("game_sessions").insert({
+      const gameData: TablesInsert<"game_sessions"> = {
         host_name: "Player",
         total_players: totalPlayers,
         mafia_count: mafiaCount,
@@ -56,13 +63,41 @@ const CreateGameModal = ({
         game_code: gameCode,
         status: "waiting",
         current_players: 1,
+      };
+
+      console.log("Inserting game data:", gameData);
+
+      const { data, error } = await supabase
+        .from("game_sessions")
+        .insert(gameData)
+        .select()
+        .single();
+
+      console.log("Insert result:", { data, error });
+
+      if (error) {
+        console.error("Error creating game:", error);
+        setError(error.message);
+        return;
+      }
+
+      if (!data) {
+        throw new Error("No data returned after insert");
+      }
+
+      onCreateGame({
+        totalPlayers: data.total_players,
+        mafiaCount: data.mafia_count,
+        gameDuration: data.game_duration,
+        gameCode: data.game_code,
       });
-
-      if (error) throw error;
-
-      onCreateGame({ totalPlayers, mafiaCount, gameDuration, gameCode });
     } catch (error) {
       console.error("Error creating game:", error);
+      setError(
+        error instanceof Error ? error.message : "Failed to create game",
+      );
+    } finally {
+      setCreating(false);
     }
   };
 
@@ -79,6 +114,13 @@ const CreateGameModal = ({
         </DialogHeader>
 
         <div className="space-y-6 py-4">
+          {error && (
+            <div className="flex items-center gap-2 p-3 rounded-md bg-red-950 text-red-400 mb-4">
+              <AlertCircle className="w-5 h-5" />
+              <span>{error}</span>
+            </div>
+          )}
+
           <div className="space-y-6">
             <div className="space-y-2">
               <Label htmlFor="total-players">Total Players</Label>
@@ -153,22 +195,25 @@ const CreateGameModal = ({
             variant="outline"
             onClick={() => handleCreateGame(true)}
             className="w-full sm:w-auto bg-gray-800 text-white hover:bg-gray-700 border-gray-600"
+            disabled={creating}
           >
-            Create Test Game
+            {creating ? "Creating..." : "Create Test Game"}
           </Button>
           <div className="flex justify-end gap-2 w-full">
             <Button
               variant="outline"
               onClick={() => onOpenChange(false)}
               className="bg-gray-700 text-white hover:bg-gray-600 border-gray-600"
+              disabled={creating}
             >
               Cancel
             </Button>
             <Button
               onClick={() => handleCreateGame(false)}
               className="bg-purple-600 hover:bg-purple-700"
+              disabled={creating}
             >
-              Create Game
+              {creating ? "Creating..." : "Create Game"}
             </Button>
           </div>
         </DialogFooter>

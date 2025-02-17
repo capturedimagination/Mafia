@@ -7,7 +7,7 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Users, Crown } from "lucide-react";
+import { Users, Crown, AlertCircle } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useEffect, useState } from "react";
@@ -35,25 +35,39 @@ const JoinGameModal = ({
   availableGames = [],
 }: JoinGameModalProps) => {
   const [games, setGames] = useState<Game[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     // Initial fetch of games
     const fetchGames = async () => {
       try {
+        setLoading(true);
+        setError(null);
+        console.log("Fetching games...");
+
         const { data, error } = await supabase
           .from("game_sessions")
-          .select("*")
-          .eq("status", "waiting");
+          .select("*");
+
+        console.log("Fetch result:", { data, error });
 
         if (error) {
           console.error("Error fetching games:", error);
+          setError(error.message);
           return;
         }
 
-        if (!data) return;
+        if (!data) {
+          setError("No data received");
+          return;
+        }
+
+        const activeGames = data.filter((game) => game.status === "waiting");
+        console.log("Active games:", activeGames);
 
         setGames(
-          data.map((game) => ({
+          activeGames.map((game) => ({
             id: game.id,
             hostName: game.host_name,
             playerCount: game.current_players,
@@ -66,6 +80,9 @@ const JoinGameModal = ({
         );
       } catch (error) {
         console.error("Error fetching games:", error);
+        setError("Failed to fetch games");
+      } finally {
+        setLoading(false);
       }
     };
 
@@ -79,7 +96,7 @@ const JoinGameModal = ({
         { event: "*", schema: "public", table: "game_sessions" },
         (payload) => {
           console.log("Real-time update:", payload);
-          fetchGames(); // Refetch games when there's any change
+          fetchGames();
         },
       )
       .subscribe();
@@ -102,41 +119,56 @@ const JoinGameModal = ({
         </DialogHeader>
 
         <ScrollArea className="h-[400px] pr-4">
-          <div className="space-y-4">
-            {games.map((game) => (
-              <Card
-                key={game.id}
-                className={`p-4 bg-gray-800 border-gray-700 ${game.status === "waiting" ? "hover:border-purple-500 cursor-pointer" : "opacity-50"}`}
-                onClick={() => game.status === "waiting" && onJoin(game.id)}
-              >
-                <div className="flex items-center justify-between">
-                  <div className="space-y-1">
-                    <div className="flex items-center gap-2">
-                      <Crown className="w-4 h-4 text-yellow-500" />
-                      <span className="font-medium">
-                        {game.hostName}'s Game
-                      </span>
+          {loading ? (
+            <div className="text-center py-8 text-gray-400">
+              Loading games...
+            </div>
+          ) : error ? (
+            <div className="flex items-center justify-center gap-2 py-8 text-red-400">
+              <AlertCircle className="w-5 h-5" />
+              <span>{error}</span>
+            </div>
+          ) : games.length === 0 ? (
+            <div className="text-center py-8 text-gray-400">
+              No games available. Create one!
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {games.map((game) => (
+                <Card
+                  key={game.id}
+                  className={`p-4 bg-gray-800 border-gray-700 ${game.status === "waiting" ? "hover:border-purple-500 cursor-pointer" : "opacity-50"}`}
+                  onClick={() => game.status === "waiting" && onJoin(game.id)}
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2">
+                        <Crown className="w-4 h-4 text-yellow-500" />
+                        <span className="font-medium">
+                          {game.hostName}'s Game
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2 text-sm text-gray-400">
+                        <Users className="w-4 h-4" />
+                        <span>
+                          {game.playerCount} / {game.totalPlayers} players
+                        </span>
+                      </div>
                     </div>
-                    <div className="flex items-center gap-2 text-sm text-gray-400">
-                      <Users className="w-4 h-4" />
-                      <span>
-                        {game.playerCount} / {game.totalPlayers} players
-                      </span>
+                    <div
+                      className={`px-3 py-1 rounded-full text-sm ${getStatusStyles(game.status)}`}
+                    >
+                      {game.status === "waiting"
+                        ? "Join"
+                        : game.status === "full"
+                          ? "Full"
+                          : "In Progress"}
                     </div>
                   </div>
-                  <div
-                    className={`px-3 py-1 rounded-full text-sm ${getStatusStyles(game.status)}`}
-                  >
-                    {game.status === "waiting"
-                      ? "Join"
-                      : game.status === "full"
-                        ? "Full"
-                        : "In Progress"}
-                  </div>
-                </div>
-              </Card>
-            ))}
-          </div>
+                </Card>
+              ))}
+            </div>
+          )}
         </ScrollArea>
 
         <div className="flex justify-end">
