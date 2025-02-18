@@ -152,21 +152,34 @@ const Home = () => {
             isGameStarting={gameStartCountdown > 0 && gameStartCountdown < 6}
             countdownSeconds={gameStartCountdown}
             onStartGame={() => {
-              // Assign role based on game settings
+              // Assign roles based on player order and game settings
               const totalPlayers = currentGame.totalPlayers;
               const mafiaCount = currentGame.mafiaCount;
 
-              // Calculate probabilities
-              const mafiaProb = mafiaCount / totalPlayers;
-              const detectiveProb = 1 / totalPlayers; // Usually 1 detective per game
-
-              const rand = Math.random();
-              if (rand < mafiaProb) {
+              // For test games, assign host as Mafia for easier testing
+              if (currentGame.isTestGame) {
                 setPlayerRole("Mafia");
-              } else if (rand < mafiaProb + detectiveProb) {
-                setPlayerRole("Detective");
               } else {
-                setPlayerRole("Civilian");
+                // In real games:
+                // First mafiaCount players are Mafia
+                // Next player is Detective
+                // Rest are Civilians
+                // This ensures proper role distribution
+                const { data: gameData } = await supabase
+                  .from("game_sessions")
+                  .select("current_players")
+                  .eq("game_code", currentGame.gameCode)
+                  .single();
+
+                const playerNumber = gameData?.current_players || 1;
+
+                if (playerNumber <= mafiaCount) {
+                  setPlayerRole("Mafia");
+                } else if (playerNumber === mafiaCount + 1) {
+                  setPlayerRole("Detective");
+                } else {
+                  setPlayerRole("Civilian");
+                }
               }
 
               // Start countdown

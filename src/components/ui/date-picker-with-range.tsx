@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { format } from "date-fns";
+import { addDays, format } from "date-fns";
 import { Calendar as CalendarIcon } from "lucide-react";
 import { DateRange } from "react-day-picker";
 
@@ -14,24 +14,11 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 
-interface DatePickerWithRangeProps {
-  className?: string;
-  date?: DateRange;
-  onDateChange?: (date: DateRange | undefined) => void;
-}
-
-export function DatePickerWithRange({
-  className,
-  date,
-  onDateChange,
-}: DatePickerWithRangeProps) {
-  const [dateRange, setDateRange] = React.useState<DateRange | undefined>(date);
-
-  React.useEffect(() => {
-    if (date !== dateRange) {
-      setDateRange(date);
-    }
-  }, [date]);
+export function DatePickerWithRange({ className }: { className?: string }) {
+  const [date, setDate] = React.useState<DateRange | undefined>({
+    from: new Date(),
+    to: addDays(new Date(), 7),
+  });
 
   return (
     <div className={cn("grid gap-2", className)}>
@@ -46,17 +33,17 @@ export function DatePickerWithRange({
             )}
           >
             <CalendarIcon className="mr-2 h-4 w-4" />
-            {dateRange?.from ? (
-              dateRange.to ? (
+            {date?.from ? (
+              date.to ? (
                 <>
-                  {format(dateRange.from, "LLL dd, y")} -{" "}
-                  {format(dateRange.to, "LLL dd, y")}
+                  {format(date.from, "LLL dd, y")} -{" "}
+                  {format(date.to, "LLL dd, y")}
                 </>
               ) : (
-                format(dateRange.from, "LLL dd, y")
+                format(date.from, "LLL dd, y")
               )
             ) : (
-              <span>Pick a date range</span>
+              <span>Pick a date</span>
             )}
           </Button>
         </PopoverTrigger>
@@ -64,12 +51,9 @@ export function DatePickerWithRange({
           <Calendar
             initialFocus
             mode="range"
-            defaultMonth={dateRange?.from}
-            selected={dateRange}
-            onSelect={(date) => {
-              setDateRange(date);
-              if (onDateChange) onDateChange(date);
-            }}
+            defaultMonth={date?.from}
+            selected={date}
+            onSelect={setDate}
             numberOfMonths={2}
           />
         </PopoverContent>

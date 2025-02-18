@@ -10,6 +10,8 @@ import { Button } from "@/components/ui/button";
 import { Users, Crown, AlertCircle } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { useEffect, useState } from "react";
 import { supabase, type GameSession } from "@/lib/supabase";
 
@@ -106,6 +108,39 @@ const JoinGameModal = ({
     };
   }, []);
 
+  const [gameCode, setGameCode] = useState("");
+  const [joinByCodeError, setJoinByCodeError] = useState<string | null>(null);
+
+  const handleJoinByCode = async () => {
+    try {
+      setJoinByCodeError(null);
+      const { data, error } = await supabase
+        .from("game_sessions")
+        .select("*")
+        .eq("game_code", gameCode.toUpperCase())
+        .single();
+
+      if (error) {
+        setJoinByCodeError("Failed to find game");
+        return;
+      }
+
+      if (!data) {
+        setJoinByCodeError("Game not found");
+        return;
+      }
+
+      if (data.status !== "waiting") {
+        setJoinByCodeError("Game is no longer accepting players");
+        return;
+      }
+
+      onJoin(data.id);
+    } catch (error) {
+      setJoinByCodeError("Failed to join game");
+    }
+  };
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-[600px] bg-gray-900 text-white">
@@ -114,9 +149,45 @@ const JoinGameModal = ({
             Available Games
           </DialogTitle>
           <DialogDescription className="text-gray-400">
-            Select a game to join from the list below.
+            Join by entering a game code or select from available games.
           </DialogDescription>
         </DialogHeader>
+
+        <div className="space-y-4 mb-4">
+          <div className="space-y-2">
+            <Label htmlFor="game-code">Game Code</Label>
+            <div className="flex gap-2">
+              <Input
+                id="game-code"
+                placeholder="Enter game code"
+                value={gameCode}
+                onChange={(e) => setGameCode(e.target.value)}
+                className="bg-gray-800 border-gray-700 text-white"
+              />
+              <Button
+                onClick={handleJoinByCode}
+                className="bg-purple-600 hover:bg-purple-700"
+                disabled={!gameCode.trim()}
+              >
+                Join
+              </Button>
+            </div>
+            {joinByCodeError && (
+              <p className="text-red-400 text-sm">{joinByCodeError}</p>
+            )}
+          </div>
+
+          <div className="relative">
+            <div className="absolute inset-0 flex items-center">
+              <span className="w-full border-t border-gray-700" />
+            </div>
+            <div className="relative flex justify-center text-xs uppercase">
+              <span className="bg-gray-900 px-2 text-gray-400">
+                or join available games
+              </span>
+            </div>
+          </div>
+        </div>
 
         <ScrollArea className="h-[400px] pr-4">
           {loading ? (

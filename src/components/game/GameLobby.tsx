@@ -71,7 +71,15 @@ const GameLobby = ({
         ← Leave Game
       </Button>
       <div className="flex flex-col items-center space-y-6 mt-8">
-        <h2 className="text-2xl font-bold text-white">{hostName}'s Game</h2>
+        <div className="text-center space-y-2">
+          <h2 className="text-2xl font-bold text-white">{hostName}'s Game</h2>
+          <p className="text-gray-400">
+            Game Code:{" "}
+            <span className="font-mono bg-gray-800 px-2 py-1 rounded">
+              {gameCode}
+            </span>
+          </p>
+        </div>
         {/* Players List */}
         <div className="w-full">
           <div className="flex items-center justify-between mb-4">
